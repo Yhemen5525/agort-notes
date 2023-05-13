@@ -1,1 +1,262 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Agort Notes</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.css">
+    <style>
+    body {
+  font-family: Arial, sans-serif;
+  background-color: #f5f5f5;
+}
+
+      
+h1 {
+  text-align: center;
+  margin-top: 30px;
+  word-break: break-word;
+}
+
+form {
+  margin: 0 auto;
+  width: 300px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  padding: 20px;
+  border-radius: 5px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+input[type="text"],
+textarea,
+input[type="file"] {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+button[type="submit"] {
+  background-color: #4CAF50;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button[type="submit"]:hover {
+  background-color: #3e8e41;
+}
+
+ul {
+  margin-top: 30px;
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 15px;
+  width: 300px;
+  max-height: 500px;
+  overflow: auto;
+  word-break: break-word;
+  word-wrap: break-word;
+}
+
+h3 {
+  margin-top: 0;
+}
+
+.delete-button {
+  background-color: #f44336;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.delete-button:hover {
+  background-color: #c62828;
+}
+
+      #notes-list {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#notes-list li {
+  display: inline-block;
+  margin: 10px;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+    </style>
+  </head>
+  <body>
+    <h1>agortNotes</h1>
+    <form id="new-note-form">
+      <label for="title">Title:</label>
+      <input type="text" id="title" name="title"><br><br>
+      <label for="content">Content:</label>
+      <textarea id="content" name="content"></textarea><br><br>
+      <input type="file" id="file" name="file"><br><br>
+      <button type="submit">Save Note</button>
+    </form>
+    <div>
+      <a href="https://agortnotes2.yhemen5525.repl.co/files">view uploads</a>
+    </div>
+    <ul id="notes-list"></ul>
+
+    <script>
+      const notesList = document.querySelector('#notes-list');
+      const newNoteForm = document.querySelector('#new-note-form');
+
+      // Retrieve all notes from the server and display them
+      function getNotes() {
+  fetch('https://agortnotes2.yhemen5525.repl.co/notes')
+    .then(response => response.json())
+    .then(notes => {
+      notesList.innerHTML = '';
+      notes.forEach(note => {
+        const listItem = document.createElement('li');
+        listItem.innerHTML = `
+          <h3>${note.title}</h3>
+          <p>${note.content}</p>
+          <button class="delete-button" data-note-id="${note.id}">Delete</button>
+        `;
+        const titleElem = listItem.querySelector('h3');
+        const contentElem = listItem.querySelector('p');
+        titleElem.innerText = note.title;
+        contentElem.innerText = note.content;
+        const deleteBtn = listItem.querySelector('.delete-button');
+        deleteBtn.innerText = 'Delete';
+        deleteBtn.setAttribute('data-note-id', note.id);
+        notesList.appendChild(listItem);
+      });
+    });
+}
+
+      // Delete a note
+      function deleteNote(noteId) {
+        fetch(`https://agortnotes2.yhemen5525.repl.co/notes/${noteId}`, { method: 'DELETE' })
+          .then(() => getNotes());
+      }
+
+      // Add a new note
+     newNoteForm.addEventListener('submit', event => {
+  event.preventDefault();
+  const submitButton = document.querySelector('[type="submit"]');
+  submitButton.innerText = "Loading...";
+  const formData = new FormData(newNoteForm);
+  const data = {
+    title: formData.get('title'),
+    content: formData.get('content')
+  };
+  fetch('https://agortnotes2.yhemen5525.repl.co/notes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(note => {
+    if (formData.get('file')) {
+      const file = formData.get('file');
+      const fileData = new FormData();
+      fileData.append('file', file);
+      fetch('https://agortnotes2.yhemen5525.repl.co/uploads', {
+        method: 'POST',
+        body: fileData
+      })
+      .then(() => {
+         Swal.fire({
+            icon: 'success',
+            title: 'File sent successfully!',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000
+          });
+        getNotes();
+        submitButton.innerText = "Send";
+      });
+    } else {
+      //alert('Note added successfully!');
+      getNotes();
+      submitButton.innerText = "Send";
+    }
+    newNoteForm.reset();
+  });
+});
+
+
+      // Delete a note when the Delete button is clicked
+// Delete a note when the Delete button is clicked
+notesList.addEventListener('click', event => {
+  if (event.target.classList.contains('delete-button')) {
+    const deleteButton = event.target;
+    const originalButtonText = deleteButton.innerText;
+    deleteButton.innerText = 'Loading...';
+    
+    const noteId = deleteButton.dataset.noteId;
+    // Prompt for password before deleting the note
+    Swal.fire({
+      title: 'Enter password to delete this note',
+      input: 'password',
+      inputAttributes: {
+        autocapitalize: 'off',
+        autocorrect: 'off'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      showLoaderOnConfirm: true,
+      preConfirm: (password) => {
+        return fetch(`/notes/${noteId}?password=${password}`, {
+          method: 'DELETE'
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(response.statusText)
+          }
+          return response.json();
+        })
+        .catch(error => {
+          Swal.showValidationMessage(`Request failed: ${error}`)
+        })
+      },
+      allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+      if (result.isConfirmed) {
+        deleteButton.innerText = originalButtonText;
+        location.reload();
+      }
+    });
+  }
+});
+
+
+
+      // Retrieve all notes when the page loads
+      getNotes();
+    </script>
+  </body>
+</html>
 
